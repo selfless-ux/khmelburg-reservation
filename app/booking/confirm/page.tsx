@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export default function BookingConfirmPage() {
   const params = useMemo(() => {
@@ -11,16 +11,25 @@ export default function BookingConfirmPage() {
     return new URLSearchParams(window.location.search);
   }, []);
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [resultMessage, setResultMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
   if (!params) {
     return null;
   }
 
   const tableId = params.get("table");
   const tablesParam = params.get("tables");
+
   const guests = params.get("guests") || "2";
   const date = params.get("date") || "";
   const time = params.get("time") || "";
   const type = params.get("type") || "table";
+
+  const name = params.get("name") || "";
+  const phone = params.get("phone") || "";
+  const email = params.get("email") || "";
 
   const barTableIds = tablesParam
     ? tablesParam.split(",").filter(Boolean)
@@ -46,17 +55,80 @@ export default function BookingConfirmPage() {
     window.history.back();
   }
 
-  function confirmBooking() {
-    alert(
-      "Бронирование подтверждено! На следующем этапе подключим сохранение бронирования в базу данных."
-    );
+  async function confirmBooking() {
+    setErrorMessage("");
+    setResultMessage("");
+
+    if (!name || !phone) {
+      setErrorMessage(
+        "Не указаны имя и номер телефона. Вернитесь назад и заполните данные клиента."
+      );
+      return;
+    }
+
+    const tableIds = isBar
+      ? barTableIds.map(Number)
+      : tableId
+        ? [Number(tableId)]
+        : [];
+
+    if (tableIds.length === 0) {
+      setErrorMessage("Столик не выбран.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tableId: isBar ? undefined : Number(tableId),
+          tableIds: isBar ? tableIds : undefined,
+          guests: Number(guests),
+          date,
+          time,
+          name,
+          phone,
+          email: email || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error || "Не удалось создать бронирование"
+        );
+      }
+
+      const bookingIds = Array.isArray(data.bookingIds)
+        ? data.bookingIds.join(", ")
+        : data.booking?.id;
+
+      setResultMessage(
+        `Бронирование успешно сохранено! Номер бронирования: ${bookingIds}`
+      );
+    } catch (error) {
+      console.error("Ошибка бронирования:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Произошла ошибка при сохранении бронирования."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
     <main className="min-h-screen bg-[#f4eee7] px-4 py-8 text-[#30251f] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
 
-        {/* HEADER */}
         <header className="mb-8 text-center">
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#9b6749]">
             ХМЕЛЬБУРГ
@@ -71,10 +143,8 @@ export default function BookingConfirmPage() {
           </p>
         </header>
 
-        {/* MAIN CARD */}
         <section className="rounded-[2rem] border border-[#e2d5cb] bg-white p-6 shadow-xl sm:p-8">
 
-          {/* SELECTED PLACE */}
           <div className="mb-6 rounded-2xl bg-[#f8f4ef] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6547]">
               Ваш выбор
@@ -96,7 +166,6 @@ export default function BookingConfirmPage() {
             )}
           </div>
 
-          {/* BOOKING PARAMETERS */}
           <div className="grid gap-4 sm:grid-cols-3">
 
             <div className="rounded-2xl bg-[#f8f4ef] p-4">
@@ -131,7 +200,44 @@ export default function BookingConfirmPage() {
 
           </div>
 
-          {/* BAR SEATS */}
+          <div className="mt-5 rounded-2xl bg-[#f8f4ef] p-5">
+
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6547]">
+              Данные клиента
+            </p>
+
+            <div className="mt-3 space-y-2 text-sm">
+
+              <p>
+                <span className="text-[#95857b]">
+                  Имя:
+                </span>{" "}
+                <strong>
+                  {name || "Не указано"}
+                </strong>
+              </p>
+
+              <p>
+                <span className="text-[#95857b]">
+                  Телефон:
+                </span>{" "}
+                <strong>
+                  {phone || "Не указан"}
+                </strong>
+              </p>
+
+              {email && (
+                <p>
+                  <span className="text-[#95857b]">
+                    Email:
+                  </span>{" "}
+                  <strong>{email}</strong>
+                </p>
+              )}
+
+            </div>
+          </div>
+
           {isBar && barTableIds.length > 0 && (
             <div className="mt-5 rounded-2xl border border-purple-200 bg-purple-50 p-5">
 
@@ -146,51 +252,33 @@ export default function BookingConfirmPage() {
             </div>
           )}
 
-          {/* SUMMARY */}
-          <div className="mt-6 rounded-2xl border border-[#e4d8cf] bg-[#fffaf6] p-5">
-
-            <p className="text-sm font-semibold text-[#8b5638]">
-              Детали бронирования
-            </p>
-
-            <div className="mt-3 space-y-2 text-sm text-[#6f625a]">
-
-              <p>
-                👥 Количество гостей:{" "}
-                <strong>{guests}</strong>
+          {resultMessage && (
+            <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-5 text-green-800">
+              <p className="font-bold">
+                {resultMessage}
               </p>
-
-              <p>
-                📅 Дата:{" "}
-                <strong>{formatDate(date)}</strong>
-              </p>
-
-              <p>
-                🕐 Время:{" "}
-                <strong>{time || "Не выбрано"}</strong>
-              </p>
-
-              <p>
-                {isBar ? "🍸" : "🪑"} Место:{" "}
-                <strong>
-                  {isBar
-                    ? `места у бара (${barTableIds.length})`
-                    : tableId
-                      ? `столик №${tableId}`
-                      : "не выбрано"}
-                </strong>
-              </p>
-
             </div>
-          </div>
+          )}
 
-          {/* BUTTONS */}
+          {errorMessage && (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">
+              <p className="font-bold">
+                Ошибка
+              </p>
+
+              <p className="mt-1 text-sm">
+                {errorMessage}
+              </p>
+            </div>
+          )}
+
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
 
             <button
               type="button"
               onClick={goBack}
-              className="rounded-2xl border-2 border-[#d8c8bd] bg-white px-6 py-4 font-bold text-[#6f5e54] transition hover:bg-[#f8f3ee]"
+              disabled={isLoading}
+              className="rounded-2xl border-2 border-[#d8c8bd] bg-white px-6 py-4 font-bold text-[#6f5e54] transition hover:bg-[#f8f3ee] disabled:cursor-not-allowed disabled:opacity-50"
             >
               ← Назад
             </button>
@@ -198,9 +286,14 @@ export default function BookingConfirmPage() {
             <button
               type="button"
               onClick={confirmBooking}
-              className="flex-1 rounded-2xl bg-[#8a5639] px-6 py-4 font-bold text-white shadow-md transition hover:bg-[#70442e]"
+              disabled={isLoading || !!resultMessage}
+              className="flex-1 rounded-2xl bg-[#8a5639] px-6 py-4 font-bold text-white shadow-md transition hover:bg-[#70442e] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Подтвердить бронирование →
+              {isLoading
+                ? "Сохраняем бронирование..."
+                : resultMessage
+                  ? "Бронирование сохранено ✓"
+                  : "Подтвердить бронирование →"}
             </button>
 
           </div>
