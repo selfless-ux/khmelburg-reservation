@@ -102,7 +102,14 @@ export default function BookingPage() {
         setLoading(true);
         setError("");
 
-        const response = await fetch("/api/tables");
+        const response = await fetch(
+  `/api/tables?date=${encodeURIComponent(
+    dateParam || ""
+  )}&time=${encodeURIComponent(
+    timeParam || ""
+  )}`
+);
+
 
         if (!response.ok) {
           throw new Error(
