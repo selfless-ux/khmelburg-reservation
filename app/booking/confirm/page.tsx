@@ -112,12 +112,26 @@ export default function BookingConfirmPage() {
       }
 
       const bookingIds = Array.isArray(data.bookingIds)
-        ? data.bookingIds.join(", ")
-        : data.booking?.id;
+  ? data.bookingIds.join(", ")
+  : data.booking?.id;
 
-      setResultMessage(
-        `Бронирование успешно сохранено! Номер бронирования: ${bookingIds}`
-      );
+const successParams = new URLSearchParams({
+  guests,
+  date,
+  time,
+  name,
+  phone,
+  bookingId: String(bookingIds || ""),
+});
+
+if (isBar) {
+  successParams.set("tables", barTableIds.join(","));
+} else {
+  successParams.set("table", String(tableId || ""));
+}
+
+window.location.href =
+  `/booking/success?${successParams.toString()}`;
     } catch (error) {
       console.error("Ошибка бронирования:", error);
 
