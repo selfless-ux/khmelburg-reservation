@@ -15,21 +15,20 @@ export default function BookingConfirmPage() {
   const [resultMessage, setResultMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
   if (!params) {
     return null;
   }
 
   const tableId = params.get("table");
   const tablesParam = params.get("tables");
-
   const guests = params.get("guests") || "2";
   const date = params.get("date") || "";
   const time = params.get("time") || "";
   const type = params.get("type") || "table";
-
-  const name = params.get("name") || "";
-  const phone = params.get("phone") || "";
-  const email = params.get("email") || "";
 
   const barTableIds = tablesParam
     ? tablesParam.split(",").filter(Boolean)
@@ -59,10 +58,17 @@ export default function BookingConfirmPage() {
     setErrorMessage("");
     setResultMessage("");
 
-    if (!name || !phone) {
-      setErrorMessage(
-        "Не указаны имя и номер телефона. Вернитесь назад и заполните данные клиента."
-      );
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      setErrorMessage("Введите имя клиента.");
+      return;
+    }
+
+    if (!trimmedPhone) {
+      setErrorMessage("Введите номер телефона.");
       return;
     }
 
@@ -91,9 +97,9 @@ export default function BookingConfirmPage() {
           guests: Number(guests),
           date,
           time,
-          name,
-          phone,
-          email: email || null,
+          name: trimmedName,
+          phone: trimmedPhone,
+          email: trimmedEmail || null,
         }),
       });
 
@@ -129,6 +135,7 @@ export default function BookingConfirmPage() {
     <main className="min-h-screen bg-[#f4eee7] px-4 py-8 text-[#30251f] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
 
+        {/* HEADER */}
         <header className="mb-8 text-center">
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#9b6749]">
             ХМЕЛЬБУРГ
@@ -139,12 +146,13 @@ export default function BookingConfirmPage() {
           </h1>
 
           <p className="mx-auto mt-3 max-w-xl text-[#766960]">
-            Проверьте параметры бронирования перед подтверждением.
+            Проверьте параметры бронирования и заполните данные клиента.
           </p>
         </header>
 
         <section className="rounded-[2rem] border border-[#e2d5cb] bg-white p-6 shadow-xl sm:p-8">
 
+          {/* ВЫБОР */}
           <div className="mb-6 rounded-2xl bg-[#f8f4ef] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6547]">
               Ваш выбор
@@ -166,8 +174,8 @@ export default function BookingConfirmPage() {
             )}
           </div>
 
+          {/* ПАРАМЕТРЫ */}
           <div className="grid gap-4 sm:grid-cols-3">
-
             <div className="rounded-2xl bg-[#f8f4ef] p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#95857b]">
                 Дата
@@ -197,50 +205,91 @@ export default function BookingConfirmPage() {
                 {guests}
               </p>
             </div>
-
           </div>
 
-          <div className="mt-5 rounded-2xl bg-[#f8f4ef] p-5">
-
+          {/* ДАННЫЕ КЛИЕНТА */}
+          <div className="mt-6 rounded-2xl bg-[#f8f4ef] p-5">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9a6547]">
               Данные клиента
             </p>
 
-            <div className="mt-3 space-y-2 text-sm">
+            <div className="mt-5 space-y-4">
 
-              <p>
-                <span className="text-[#95857b]">
-                  Имя:
-                </span>{" "}
-                <strong>
-                  {name || "Не указано"}
-                </strong>
-              </p>
+              {/* ИМЯ */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="mb-2 block text-sm font-semibold text-[#5f5048]"
+                >
+                  Имя *
+                </label>
 
-              <p>
-                <span className="text-[#95857b]">
-                  Телефон:
-                </span>{" "}
-                <strong>
-                  {phone || "Не указан"}
-                </strong>
-              </p>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(event) =>
+                    setName(event.target.value)
+                  }
+                  placeholder="Введите ваше имя"
+                  disabled={isLoading || !!resultMessage}
+                  className="w-full rounded-xl border border-[#d5c7bc] bg-white px-4 py-3 outline-none transition focus:border-[#9b6749] focus:ring-2 focus:ring-[#9b6749]/20 disabled:opacity-60"
+                />
+              </div>
 
-              {email && (
-                <p>
-                  <span className="text-[#95857b]">
-                    Email:
-                  </span>{" "}
-                  <strong>{email}</strong>
-                </p>
-              )}
+              {/* ТЕЛЕФОН */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="mb-2 block text-sm font-semibold text-[#5f5048]"
+                >
+                  Номер телефона *
+                </label>
+
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) =>
+                    setPhone(event.target.value)
+                  }
+                  placeholder="+7 (999) 123-45-67"
+                  disabled={isLoading || !!resultMessage}
+                  className="w-full rounded-xl border border-[#d5c7bc] bg-white px-4 py-3 outline-none transition focus:border-[#9b6749] focus:ring-2 focus:ring-[#9b6749]/20 disabled:opacity-60"
+                />
+              </div>
+
+              {/* EMAIL */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-semibold text-[#5f5048]"
+                >
+                  Email
+                  <span className="ml-2 font-normal text-[#9a8b82]">
+                    (необязательно)
+                  </span>
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="example@mail.ru"
+                  disabled={isLoading || !!resultMessage}
+                  className="w-full rounded-xl border border-[#d5c7bc] bg-white px-4 py-3 outline-none transition focus:border-[#9b6749] focus:ring-2 focus:ring-[#9b6749]/20 disabled:opacity-60"
+                />
+              </div>
 
             </div>
           </div>
 
+          {/* БАРНЫЕ МЕСТА */}
           {isBar && barTableIds.length > 0 && (
             <div className="mt-5 rounded-2xl border border-purple-200 bg-purple-50 p-5">
-
               <p className="text-sm font-bold text-purple-800">
                 Выбранные места у бара
               </p>
@@ -248,18 +297,23 @@ export default function BookingConfirmPage() {
               <p className="mt-2 text-purple-700">
                 № {barTableIds.join(", ")}
               </p>
-
             </div>
           )}
 
+          {/* УСПЕХ */}
           {resultMessage && (
             <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-5 text-green-800">
               <p className="font-bold">
+                ✓ Бронирование успешно создано
+              </p>
+
+              <p className="mt-2 text-sm">
                 {resultMessage}
               </p>
             </div>
           )}
 
+          {/* ОШИБКА */}
           {errorMessage && (
             <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">
               <p className="font-bold">
@@ -272,6 +326,7 @@ export default function BookingConfirmPage() {
             </div>
           )}
 
+          {/* КНОПКИ */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
 
             <button
